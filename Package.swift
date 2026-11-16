@@ -13,8 +13,8 @@ let package = Package(
         .executable(name: "tactics-swift", targets: ["tactics-swift"]),
     ],
     dependencies: [
-        // 0.2.0: per-game `evaluate(game:)` without PGN output or a large-stack thread.
-        .package(url: "https://github.com/NSStudent/CQLSwiftSDK.git", from: "0.2.0"),
+        // 0.2.0: per-game `evaluate(game:)` without PGN output; 0.2.1: faster game trees.
+        .package(url: "https://github.com/NSStudent/CQLSwiftSDK.git", from: "0.2.1"),
         .package(url: "https://github.com/NSStudent/fischer-core.git", from: "0.4.0"),
     ],
     targets: [

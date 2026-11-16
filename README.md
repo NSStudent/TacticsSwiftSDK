@@ -12,7 +12,7 @@ For each game, the scanner reports where each motif occurs: the position (`posit
 
 Then add `.product(name: "Tactics", package: "TacticsSwiftSDK")` to your target's dependencies. Requires Swift 6.0 or later, macOS 13 or iOS 16.
 
-This package requires CQLSwiftSDK 0.2.0 or later.
+This package requires CQLSwiftSDK 0.2.1 or later.
 
 ## Products
 

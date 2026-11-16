@@ -12,7 +12,7 @@ For each game, the scanner reports where each motif occurs: the position (`posit
 
 Then add `.product(name: "Tactics", package: "TacticsSwiftSDK")` to your target's dependencies. Requires Swift 6.0 or later, macOS 13 or iOS 16.
 
-> **Development note.** This package needs the next CQLSwiftSDK release (after 0.1.1), which is not published yet. Until then `Package.swift` points at a sibling checkout (`.package(path: "../CQLSwiftSDK")`); once the release is tagged, replace it with `.package(url: "https://github.com/NSStudent/CQLSwiftSDK.git", from: "<version>")`.
+This package requires CQLSwiftSDK 0.2.0 or later.
 
 ## Products
 
@@ -163,9 +163,9 @@ On a sample of 5,789 games from the Lumbras Gigabase (OTB 2025), all 15 motifs r
 
 **CQLSwiftSDK gaps**
 
-None of the motifs needed a CQL feature that CQLSwiftSDK 0.1.1 lacks (`line`, `move`, `rotate45`, `similarposition`, `hhdb`, `writefile`): moves are expressed with `――`/`currentmove`, sequences with `child`/`find`, and symmetry with `flipcolor`, `flipvertical` and `flip`.
+None of the motifs needed a CQL feature that CQLSwiftSDK lacks (`line`, `move`, `rotate45`, `similarposition`, `hhdb`, `writefile`): moves are expressed with `――`/`currentmove`, sequences with `child`/`find`, and symmetry with `flipcolor`, `flipvertical` and `flip`.
 
-CQLSwiftSDK 0.1.1 had two limitations that cost time, not results: `CQLEngine` wrote an annotated PGN for every matching game, and every call started a thread with a 512 MB stack. The next CQLSwiftSDK release builds the annotated PGN only on demand and makes `evaluate(game:)` run on the calling thread when the program has no `⊢` filter; this package relies on both.
+CQLSwiftSDK 0.1.1 had two limitations that cost time, not results: `CQLEngine` wrote an annotated PGN for every matching game, and every call started a thread with a 512 MB stack. CQLSwiftSDK 0.2.0 builds the annotated PGN only on demand and makes `evaluate(game:)` run on the calling thread when the program has no `⊢` filter; this package relies on both.
 
 ## Development
 

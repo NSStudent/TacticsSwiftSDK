@@ -13,7 +13,11 @@ let package = Package(
         .executable(name: "tactics-swift", targets: ["tactics-swift"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/NSStudent/CQLSwiftSDK.git", from: "0.1.1"),
+        // Needs the next CQLSwiftSDK release (per-game `evaluate(game:)` without
+        // PGN output or a large-stack thread). Until it is published, build
+        // against a sibling checkout; then switch to:
+        // .package(url: "https://github.com/NSStudent/CQLSwiftSDK.git", from: "<version>"),
+        .package(path: "../CQLSwiftSDK"),
         .package(url: "https://github.com/NSStudent/fischer-core.git", from: "0.4.0"),
     ],
     targets: [

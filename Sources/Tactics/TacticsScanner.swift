@@ -221,6 +221,10 @@ private final class BatchResults: @unchecked Sendable {
 final class Worker: @unchecked Sendable {
     let motifs: [Motif]
     let engines: [CQLEngine]
+    /// Engines whose program may recurse deeply (it has a ⊢ filter or user
+    /// functions). They run once per batch, on one large-stack thread; the
+    /// others run game by game on the worker's own thread.
+    let batched: [Bool]
     let includeFEN: Bool
 
     init(motifs: [Motif], programs: [CQLProgram], options: TacticsScanner.Options) throws(TacticsError) {
@@ -238,6 +242,11 @@ final class Worker: @unchecked Sendable {
         }
         self.motifs = motifs
         self.engines = engines
+        self.batched = programs.map { program in
+            !program.functions.isEmpty || program.body.contains { filter in
+                if case .path = filter { true } else { false }
+            }
+        }
         self.includeFEN = options.includeFEN
     }
 
@@ -268,7 +277,7 @@ final class Worker: @unchecked Sendable {
                 return .unreadable(failure)
             case .success(let index):
                 let tree = trees[index]
-                let partial = tree.source.issues.first.map {
+                let partial = tree.readIssues.first.map {
                     GameReadError(gameNumber: tree.gameNumber, byteOffset: tree.byteOffset,
                                   reason: "stopped at \($0); later moves were ignored")
                 }
@@ -285,15 +294,24 @@ final class Worker: @unchecked Sendable {
         for (index, tree) in trees.enumerated() { indexOfTree[ObjectIdentifier(tree)] = index }
         var matches = Array(repeating: [(motif: Int, match: GameMatch)](), count: trees.count)
         for (motifIndex, engine) in engines.enumerated() {
-            let result: CQLResult
             do {
-                result = try engine.run(games: trees)
+                if batched[motifIndex] {
+                    for match in try engine.run(games: trees).matches {
+                        guard let index = indexOfTree[ObjectIdentifier(match.game)] else { continue }
+                        matches[index].append((motifIndex, match))
+                    }
+                } else {
+                    // `evaluate(game:)` neither writes PGN nor starts a thread,
+                    // but it ignores the header's game filters: apply them here.
+                    let header = engine.program.header
+                    for (index, tree) in trees.enumerated() {
+                        if let range = header.gameNumber, !range.contains(tree.gameNumber) { continue }
+                        if let result = header.result, tree.tags["Result"] != result { continue }
+                        if let match = try engine.evaluate(game: tree) { matches[index].append((motifIndex, match)) }
+                    }
+                }
             } catch {
                 throw .runtime(motifID: motifs[motifIndex].id, error)
-            }
-            for match in result.matches {
-                guard let index = indexOfTree[ObjectIdentifier(match.game)] else { continue }
-                matches[index].append((motifIndex, match))
             }
         }
         return trees.indices.map { build(trees[$0], matches[$0]) }
@@ -321,6 +339,8 @@ final class Worker: @unchecked Sendable {
             }
         }
         found.sort { ($0.order, $0.motif) < ($1.order, $1.motif) }
+        // `source` may be rebuilt on each access (games built from moves): read it once.
+        let moveTree = tree.source.tree
 
         var fens: [[Int]: String] = [:]
         if includeFEN {
@@ -329,12 +349,12 @@ final class Worker: @unchecked Sendable {
                 paths.insert(item.node.path)
                 if !item.node.path.isEmpty { paths.insert(Array(item.node.path.dropLast())) }
             }
-            fens = Self.fens(at: paths, in: tree.source.tree)
+            fens = Self.fens(at: paths, in: moveTree)
         }
 
         let occurrences = found.map { item -> MotifOccurrence in
             let node = item.node
-            let move = node.path.isEmpty ? nil : tree.source.tree.node(at: MovePath(node.path))
+            let move = node.path.isEmpty ? nil : moveTree.node(at: MovePath(node.path))
             return MotifOccurrence(
                 motifID: motifs[item.motif].id,
                 positionID: node.id,

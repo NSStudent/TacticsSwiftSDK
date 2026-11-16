@@ -1,15 +1,6 @@
 {
-  "originHash" : "8889993e4dd214f1a7a43a1f233b98b54626f1233b11836e230ddcd36e2f244a",
+  "originHash" : "c3e5ec3d3591056da324f2de5bb22212337e46c8214780fcdce15b35752441f5",
   "pins" : [
-    {
-      "identity" : "cqlswiftsdk",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/NSStudent/CQLSwiftSDK.git",
-      "state" : {
-        "revision" : "5779cc627e43ae6a86a508494f03db66bcf0aaba",
-        "version" : "0.1.1"
-      }
-    },
     {
       "identity" : "fischer-core",
       "kind" : "remoteSourceControl",

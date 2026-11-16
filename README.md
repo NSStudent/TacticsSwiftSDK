@@ -12,6 +12,8 @@ For each game, the scanner reports where each motif occurs: the position (`posit
 
 Then add `.product(name: "Tactics", package: "TacticsSwiftSDK")` to your target's dependencies. Requires Swift 6.0 or later, macOS 13 or iOS 16.
 
+> **Development note.** This package needs the next CQLSwiftSDK release (after 0.1.1), which is not published yet. Until then `Package.swift` points at a sibling checkout (`.package(path: "../CQLSwiftSDK")`); once the release is tagged, replace it with `.package(url: "https://github.com/NSStudent/CQLSwiftSDK.git", from: "<version>")`.
+
 ## Products
 
 | Product | Kind | Description |
@@ -115,7 +117,7 @@ As in CQLSwiftSDK, a game that cannot be read (for example, an invalid `FEN` tag
 
 ### How a scan runs
 
-Each game is read once into a CQLSwiftSDK `GameTree`, and every motif's `CQLEngine` runs over the same tree. Games are processed in batches: each worker thread has its own set of engines (engines keep per-game state) and searches whole batches, and the results are merged in input order. A `TacticsScanner` is not thread-safe; use one per thread.
+Each game is read once into a CQLSwiftSDK `GameTree`, and every motif's `CQLEngine` evaluates the same tree with `evaluate(game:)`, which writes no PGN and starts no thread. Games are processed in batches: each worker thread has its own set of engines (engines keep per-game state) and searches whole batches, and the results are merged in input order. Motifs whose program contains a `⊢` filter or user functions, whose matching can recurse deeply, instead run once per batch with `run(games:)`, on a single large-stack thread. A `TacticsScanner` is not thread-safe; use one per thread.
 
 ## Command line
 
@@ -151,7 +153,7 @@ Options: `-m/--motifs`, `--cql` (repeatable), `-c/--counts`, `--fen`, `--variati
 - Custom motifs from CQL source or `.cql` files.
 - `tactics-swift` command-line tool.
 
-On a sample of 5,789 games from the Lumbras Gigabase (OTB 2025), all 15 motifs ran in about 22 s of CPU time (16 s on 10 cores, release build). Most hits checked by hand were genuine tactics: Bxf7+ and Bxg6+ sacrifices, pawn forks, skewers of king and rook, pins of a queen by a rook. Occurrences (games): knight fork 707 (642), double attack 3,169 (2,302), absolute pin 728 (642), relative pin 480 (453), skewer 484 (433), discovered attack 556 (521), discovered check 455 (404), double check 67 (66), back-rank mate 17, smothered mate 3, Anastasia's mate 5, Arabian mate 4, promotion 776 (620), underpromotion 33 (32), sacrifice 874 (799).
+On a sample of 5,789 games from the Lumbras Gigabase (OTB 2025), all 15 motifs ran in about 19 s of CPU time (release build), spread over all cores. Most hits checked by hand were genuine tactics: Bxf7+ and Bxg6+ sacrifices, pawn forks, skewers of king and rook, pins of a queen by a rook. Occurrences (games): knight fork 707 (642), double attack 3,169 (2,302), absolute pin 728 (642), relative pin 480 (453), skewer 484 (433), discovered attack 556 (521), discovered check 455 (404), double check 67 (66), back-rank mate 17, smothered mate 3, Anastasia's mate 5, Arabian mate 4, promotion 776 (620), underpromotion 33 (32), sacrifice 874 (799).
 
 **Not included**
 
@@ -163,10 +165,7 @@ On a sample of 5,789 games from the Lumbras Gigabase (OTB 2025), all 15 motifs r
 
 None of the motifs needed a CQL feature that CQLSwiftSDK 0.1.1 lacks (`line`, `move`, `rotate45`, `similarposition`, `hhdb`, `writefile`): moves are expressed with `――`/`currentmove`, sequences with `child`/`find`, and symmetry with `flipcolor`, `flipvertical` and `flip`.
 
-Two limitations of the CQLSwiftSDK API affect performance, not results:
-
-- Generated comments are only available through `CQLEngine` (`Evaluator`'s comment buffer is internal), and `CQLEngine` writes an annotated PGN for every matching game, which this package does not use.
-- Each `CQLEngine.run` call starts a thread with a 512 MB stack; this package amortises it by running each engine over a batch of games.
+CQLSwiftSDK 0.1.1 had two limitations that cost time, not results: `CQLEngine` wrote an annotated PGN for every matching game, and every call started a thread with a 512 MB stack. The next CQLSwiftSDK release builds the annotated PGN only on demand and makes `evaluate(game:)` run on the calling thread when the program has no `⊢` filter; this package relies on both.
 
 ## Development
 

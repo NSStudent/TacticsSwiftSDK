@@ -192,6 +192,34 @@ import Testing
         #expect(tactics.occurrences.first?.comments == ["check"])
     }
 
+    @Test func customMotifWithPathRunsPerBatch() throws {
+        // A ⊢ filter makes the engine run over whole batches on a large stack.
+        let checkNext = Motif(id: "checkNext", name: "Check next", summary: "The next move checks.",
+                              source: "cql() ⊢ ――(check)")
+        let pgn = [TestGames.doubleCheck, TestGames.pawnPush, TestGames.directCheck].joined(separator: "\n")
+        var options = TacticsScanner.Options()
+        options.concurrency = 1
+        let report = try TacticsScanner(motifs: [checkNext, .doubleCheck], options: options).scan(pgn: pgn)
+        #expect(report.games.map(\.gameNumber) == [1, 3])
+        #expect(report.games[0].occurrences.map(\.motifID) == ["checkNext", "doubleCheck"])
+        #expect(report.games[0].occurrences.first?.ply == 0)
+        #expect(report.games[1].occurrences(ofID: "checkNext").map(\.ply) == [0])
+    }
+
+    @Test func headerGameFiltersAreHonoured() throws {
+        let whiteMates = Motif(id: "whiteMates", name: "White mates", summary: "", source: "cql(result 1-0) mate")
+        let firstGameOnly = Motif(id: "firstGame", name: "First game", summary: "", source: "cql(gamenumber 1) mate")
+        // `result` compares with the Result tag, as in CQLSwiftSDK.
+        let pgn = [("1-0", TestGames.backRankMateWhite), ("0-1", TestGames.backRankMateBlack)]
+            .map { "[Result \"\($0.0)\"]\n" + $0.1 }
+            .joined(separator: "\n")
+        let report = try TacticsScanner(motifs: [whiteMates, firstGameOnly, .backRankMate]).scan(pgn: pgn)
+        #expect(report.occurrenceCounts["whiteMates"] == 1)
+        #expect(report.occurrenceCounts["firstGame"] == 1)
+        #expect(report.occurrenceCounts["backRankMate"] == 2)
+        #expect(report.games.first?.occurrences(ofID: "whiteMates").first?.moveText == "1. Ra8#")
+    }
+
     @Test func fenCanBeDisabled() throws {
         var options = TacticsScanner.Options()
         options.includeFEN = false
